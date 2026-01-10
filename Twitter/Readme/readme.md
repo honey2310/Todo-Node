@@ -52,15 +52,6 @@ project/
 Server runs on: http://localhost:1515
 
 
-
-## Backend Routes
-Method	    Endpoint	        Description
-GET	        /api/tweets	        Get all tweets
-POST	    /api/tweets	        Add a new tweet
-PUT	        /api/tweets/:id	    Edit a tweet by ID
-DELETE	    /api/tweets/:id	    Delete a tweet by ID
-
-
 ## JSON File
 
 ### backend/data/tweets.json stores tweets:
@@ -89,8 +80,7 @@ DELETE	    /api/tweets/:id	    Delete a tweet by ID
 
 
 ## Demo
-
-
+https://github.com/user-attachments/assets/3be7b1d3-2820-4b22-b5f7-b3f0b10ac18d
 
 
 ## 🛠 Technologies Used
