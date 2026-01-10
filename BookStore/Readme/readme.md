@@ -109,3 +109,5 @@ This project demonstrates a real-world Book Store Management System following pr
 It is suitable for college projects, practical exams, and portfolio use.
 
 ## Demo
+https://github.com/user-attachments/assets/ee9f98a2-dfff-412f-b417-35b94147fde4
+
