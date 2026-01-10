@@ -1,0 +1,16 @@
+[
+  {
+    "id": 1,
+    "username": "Honey",
+    "tweet": "Excited to start my Mini Twitter project! 🚀",
+    "createdAt": "2026-01-10T08:59:10.528Z",
+    "edited": false
+  },
+  {
+    "id": 2,
+    "username": "Ananya",
+    "tweet": "Learning React + Tailwind CSS is fun and powerful! 😎",
+    "createdAt": "2026-01-10T09:00:02.206Z",
+    "edited": false
+  }
+]
