@@ -1,16 +1,16 @@
 [
   {
     "id": 1,
-    "username": "Honey",
-    "tweet": "Excited to start my Mini Twitter project! 🚀",
-    "createdAt": "2026-01-10T08:59:10.528Z",
+    "username": "honey",
+    "tweet": "Working on Twitter-like UI with avatars and action buttons. It's looking good! 🎨",
+    "createdAt": "2026-01-10T09:13:47.952Z",
     "edited": false
   },
   {
-    "id": 2,
-    "username": "Ananya",
-    "tweet": "Learning React + Tailwind CSS is fun and powerful! 😎",
-    "createdAt": "2026-01-10T09:00:02.206Z",
-    "edited": false
+    "id": 3,
+    "username": "aditya",
+    "tweet": "Mini Twitter app is ready for testing. Add/Edit/Delete tweets now! 🔥....",
+    "createdAt": "2026-01-10T09:17:54.741Z",
+    "edited": true
   }
 ]
