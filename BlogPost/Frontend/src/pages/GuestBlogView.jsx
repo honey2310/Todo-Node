@@ -31,8 +31,12 @@ export default function GuestBlogView() {
         {/* Hero Image with Overlay */}
         <div className="relative h-80 md:h-96">
           <img
-            src={`http://localhost:4000/${blog.image}`}
-            alt={blog.title}
+            src={
+              blog.image
+                ? `http://localhost:4000/${blog.image}`
+                : "https://via.placeholder.com/800x400?text=No+Image"
+            }
+            alt={blog.title || "Blog Image"}
             className="w-full h-full object-cover"
           />
           <div className="absolute inset-0 bg-black/30 flex items-end p-6">

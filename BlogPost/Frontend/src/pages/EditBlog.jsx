@@ -2,19 +2,16 @@ import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import axios from "axios";
 import React from "react";
+import Toast from "./Toast";
 
 export default function EditBlog() {
   const { id } = useParams();
   const navigate = useNavigate();
 
-  const [form, setForm] = useState({
-    title: "",
-    content: "",
-    image: null, // This will hold File or URL string
-  });
-
+  const [form, setForm] = useState({ title: "", content: "", image: null });
+  const [preview, setPreview] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [preview, setPreview] = useState(null); // For image preview
+  const [toast, setToast] = useState({ message: "", type: "" });
 
   // Fetch existing blog
   useEffect(() => {
@@ -26,16 +23,28 @@ export default function EditBlog() {
         setForm({
           title: res.data.title,
           content: res.data.content,
-          image: res.data.image, // store existing image path
+          image: res.data.image, // backend path
         });
-        setPreview(`http://localhost:4000/${res.data.image}`);
+        setPreview(
+          res.data.image ? `http://localhost:4000/${res.data.image}` : null
+        );
       } catch (err) {
         console.error(err);
-        alert("Failed to fetch blog");
+        setToast({
+          message: err.response?.data?.message || "Failed to fetch blog",
+          type: "error",
+        });
       }
     };
     fetchBlog();
   }, [id]);
+
+  // Cleanup object URL to prevent memory leaks
+  useEffect(() => {
+    return () => {
+      if (preview && form.image instanceof File) URL.revokeObjectURL(preview);
+    };
+  }, [preview, form.image]);
 
   // Handle input change
   const handleChange = (e) =>
@@ -45,25 +54,31 @@ export default function EditBlog() {
   const handleImage = (e) => {
     const file = e.target.files[0];
     if (file) {
-      setForm({ ...form, image: file }); // store File
-      setPreview(URL.createObjectURL(file)); // show preview
+      setForm({ ...form, image: file });
+      setPreview(URL.createObjectURL(file));
     }
+  };
+
+  // Remove image
+  const removeImage = () => {
+    setForm({ ...form, image: null });
+    setPreview(null);
   };
 
   // Submit updated blog
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
+
     try {
       const data = new FormData();
       data.append("title", form.title);
       data.append("content", form.content);
 
-      // Only append new image if user selected a file
       if (form.image instanceof File) {
         data.append("image", form.image);
-      } else {
-        data.append("existingImage", form.image); // send existing image path
+      } else if (form.image) {
+        data.append("existingImage", form.image);
       }
 
       await axios.put(`http://localhost:4000/api/blogs/${id}`, data, {
@@ -71,11 +86,14 @@ export default function EditBlog() {
         headers: { "Content-Type": "multipart/form-data" },
       });
 
-      alert("Blog updated successfully!");
-      navigate("/home");
+      setToast({ message: "Blog updated successfully!", type: "success" });
+      setTimeout(() => navigate("/home"), 1200);
     } catch (err) {
       console.error(err);
-      alert("Failed to update blog");
+      setToast({
+        message: err.response?.data?.message || "Failed to update blog",
+        type: "error",
+      });
     } finally {
       setLoading(false);
     }
@@ -89,7 +107,6 @@ export default function EditBlog() {
         </h2>
 
         <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Title */}
           <input
             type="text"
             name="title"
@@ -98,9 +115,9 @@ export default function EditBlog() {
             onChange={handleChange}
             className="w-full px-5 py-3 rounded-full border focus:outline-none focus:ring-2 focus:ring-[#B17457]"
             required
+            disabled={loading}
           />
 
-          {/* Content */}
           <textarea
             name="content"
             placeholder="Edit your blog..."
@@ -108,26 +125,35 @@ export default function EditBlog() {
             onChange={handleChange}
             className="w-full px-5 py-3 rounded-xl border focus:outline-none focus:ring-2 focus:ring-[#B17457] h-48 resize-none"
             required
+            disabled={loading}
           />
 
-          {/* Image Upload */}
           <div>
             {preview && (
-              <img
-                src={preview}
-                alt="Preview"
-                className="w-full h-64 object-cover rounded-xl mb-4"
-              />
+              <div className="relative mb-4">
+                <img
+                  src={preview}
+                  alt="Preview"
+                  className="w-full h-64 object-cover rounded-xl"
+                />
+                <button
+                  type="button"
+                  onClick={removeImage}
+                  className="absolute top-2 right-2 bg-red-500 text-white px-3 py-1 rounded-full shadow hover:opacity-90"
+                >
+                  Remove
+                </button>
+              </div>
             )}
             <input
               type="file"
               accept="image/*"
               onChange={handleImage}
               className="w-full text-[#4A4947]"
+              disabled={loading}
             />
           </div>
 
-          {/* Submit Button */}
           <button
             type="submit"
             disabled={loading}
@@ -137,6 +163,12 @@ export default function EditBlog() {
           </button>
         </form>
       </div>
+
+      <Toast
+        message={toast.message}
+        type={toast.type}
+        onClose={() => setToast({ message: "", type: "" })}
+      />
     </div>
   );
 }

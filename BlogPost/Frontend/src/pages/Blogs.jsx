@@ -2,14 +2,14 @@ import { useEffect, useState } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import { format } from "date-fns";
+import { FaArrowLeft } from "react-icons/fa";
 import React from "react";
-import { FaArrowLeft } from "react-icons/fa"; // using react-icons
 
 export default function GuestHome() {
   const navigate = useNavigate();
   const [blogs, setBlogs] = useState([]);
-  const [search, setSearch] = useState("");
   const [filteredBlogs, setFilteredBlogs] = useState([]);
+  const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(false);
 
   // Fetch blogs
@@ -17,10 +17,14 @@ export default function GuestHome() {
     setLoading(true);
     try {
       const res = await axios.get("http://localhost:4000/api/blogs");
-      setBlogs(res.data);
-      setFilteredBlogs(res.data);
+      // Ensure response is always an array
+      const data = Array.isArray(res.data) ? res.data : [];
+      setBlogs(data);
+      setFilteredBlogs(data);
     } catch (err) {
-      console.error(err);
+      console.error("Fetch Blogs Error:", err);
+      setBlogs([]);
+      setFilteredBlogs([]);
       alert("Failed to fetch blogs");
     } finally {
       setLoading(false);
@@ -35,7 +39,7 @@ export default function GuestHome() {
   useEffect(() => {
     if (!search) return setFilteredBlogs(blogs);
     const filtered = blogs.filter((b) =>
-      b.title.toLowerCase().includes(search.toLowerCase())
+      b.title?.toLowerCase().includes(search.toLowerCase())
     );
     setFilteredBlogs(filtered);
   }, [search, blogs]);
@@ -95,7 +99,7 @@ export default function GuestHome() {
       <div className="max-w-5xl mx-auto mt-10 px-4 grid gap-8">
         {loading ? (
           <p className="text-center text-[#4A4947]">Loading blogs...</p>
-        ) : filteredBlogs.length === 0 ? (
+        ) : !filteredBlogs || filteredBlogs.length === 0 ? (
           <p className="text-center text-[#4A4947]">No blogs found.</p>
         ) : (
           filteredBlogs.map((blog) => (
@@ -104,23 +108,33 @@ export default function GuestHome() {
               className="bg-white rounded-3xl shadow-lg overflow-hidden flex flex-col md:flex-row hover:shadow-2xl transition"
             >
               <img
-                src={`http://localhost:4000/${blog.image}`}
-                alt={blog.title}
+                src={
+                  blog.image
+                    ? `http://localhost:4000/${blog.image}` // make sure blog.image has 'uploads/...'
+                    : "https://via.placeholder.com/400x300?text=No+Image"
+                }
+                alt={blog.title || "Blog Image"}
                 className="w-full md:w-1/3 h-64 object-cover"
+                loading="lazy"
               />
               <div className="p-6 flex-1 flex flex-col justify-between">
                 <div>
                   <h2 className="text-2xl font-semibold text-[#4A4947] mb-2">
-                    {blog.title}
+                    {blog.title || "Untitled"}
                   </h2>
                   <p className="text-[#4A4947] opacity-80 line-clamp-4">
-                    {blog.content}
+                    {blog.content || "No content available."}
+                  </p>
+                  <p className="text-sm mt-2 text-[#4A4947] opacity-60">
+                    Author: {blog.author?.name || "Unknown Author"}
                   </p>
                 </div>
 
                 <div className="flex justify-between items-center mt-4">
                   <span className="text-sm text-[#4A4947] opacity-60">
-                    {format(new Date(blog.createdAt), "PPP p")}
+                    {blog.createdAt
+                      ? format(new Date(blog.createdAt), "PPP p")
+                      : ""}
                   </span>
                   <button
                     onClick={() => navigate(`/guest/view/${blog._id}`)}

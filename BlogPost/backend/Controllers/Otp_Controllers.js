@@ -1,123 +1,64 @@
-// import { OtpModel } from "../Models/Otp_Model.js";
-// import { sendOtpMail } from "../Services/otp_service.js";
-
-// export const sendOTP = async (req, res) => {
-//   const { email } = req.body;
-//   const otp = Math.floor(100000 + Math.random() * 90000);
-//   const expiry = new Date(Date.now() + 2 * 60 * 1000);
-
-//   try {
-//     await OtpModel.create({ email, otp, expiry });
-//     const status = sendOtpMail(email, otp);
-//     if (status) {
-//       res.json({ message: "OTP Send Successfully!!" });
-//     } else {
-//       res.json({ message: "Fail to Sent Email!!" });
-//     }
-//   } catch (err) {
-//     res.json({ message: "OTP Fail To Send !!" });
-//   }
-// };
-
-// export const verifyOTP = async (req, res) => {
-//   try {
-//     const { email, otp } = req.body;
-
-//     const data = await OtpModel.findOne({ email, otp }).lean();
-
-//     if (!data) {
-//       return res.status(400).json({
-//         success: false,
-//         message: "Invalid OTP",
-//       });
-//     }
-
-//     if (data.expiry < new Date()) {
-//       return res.status(400).json({
-//         success: false,
-//         message: "OTP expired",
-//       });
-//     }
-
-//     // ✅ Delete OTP after success
-//     await OtpModel.deleteOne({ _id: data._id });
-
-//     return res.status(200).json({
-//       success: true,
-//       message: "OTP verified successfully",
-//     });
-//   } catch (error) {
-//     console.error("OTP Verify Error:", error);
-//     return res.status(500).json({
-//       success: false,
-//       message: "OTP verification failed",
-//     });
-//   }
-// };
-
 import { OtpModel } from "../Models/Otp_Model.js";
-import { Auth } from "../Models/AuthModel.js"; // import Auth model
-import { sendOtpMail } from "../Services/otp_service.js";
+import { Auth } from "../Models/AuthModel.js"; // 👈 1. Make sure to import your User/Auth model
+import jwt from "jsonwebtoken";
 
-// SEND OTP
-export const sendOTP = async (req, res) => {
-  const { email } = req.body;
+export const verifyOTP = async (req, res) => {
+  const { email, otp } = req.body;
 
-  try {
-    // 1️⃣ Check if email exists in Auth
-    const user = await Auth.findOne({ email });
-    if (!user) {
-      return res.status(400).json({ success: false, message: "User not found" });
-    }
+  if (!email || !otp)
+    return res
+      .status(400)
+      .json({ success: false, message: "Email & OTP required" });
 
-    // 2️⃣ Generate OTP
-    const otp = Math.floor(100000 + Math.random() * 900000); // 6 digits
-    const expiry = new Date(Date.now() + 2 * 60 * 1000); // 2 min
+  // Search using the string version if your schema says String
+  const data = await OtpModel.findOne({
+    email: email.toLowerCase().trim(),
+    otp: otp.toString(),
+  });
 
-    // 3️⃣ Save OTP in DB
-    await OtpModel.create({ email, otp, expiry });
+  if (!data)
+    return res.status(400).json({ success: false, message: "Invalid OTP" });
 
-    // 4️⃣ Send email
-    const status = await sendOtpMail(email, otp); // make sure sendOtpMail returns a promise
-    if (status) {
-      return res.status(200).json({ success: true, message: "OTP sent successfully!" });
-    } else {
-      return res.status(500).json({ success: false, message: "Failed to send OTP email" });
-    }
-  } catch (err) {
-    console.error("Send OTP Error:", err);
-    return res.status(500).json({ success: false, message: "OTP fail to send" });
-  }
+  // 3. Find the user so we can get their ID for the token
+  const user = await Auth.findOne({ email: email.toLowerCase().trim() });
+  if (!user) return res.status(404).json({ message: "User not found" });
+
+  // 4. Create the Token
+  const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
+    expiresIn: "24h",
+  });
+
+  // 5. Set the Cookie (This is what stops the 401 error!)
+  res.cookie("Auth_token", token, {
+    httpOnly: true,
+    secure: false, // set to true in production
+    sameSite: "lax",
+    path: "/",
+    maxAge: 24 * 60 * 60 * 1000,
+  });
+
+  // If the document exists, it hasn't been deleted by TTL yet, so it's valid!
+  await OtpModel.deleteOne({ _id: data._id });
+
+  res.status(200).json({ success: true, message: "OTP verified successfully" });
 };
 
-// VERIFY OTP
-export const verifyOTP = async (req, res) => {
-  try {
-    const { email, otp } = req.body;
+// Resend OTP
+export const sendOTP = async (req, res) => {
+  const { email } = req.body;
+  const otp = Math.floor(100000 + Math.random() * 900000);
 
-    // 1️⃣ Check if user exists
-    const user = await Auth.findOne({ email });
-    if (!user) {
-      return res.status(400).json({ success: false, message: "User not found" });
-    }
+  await OtpModel.create({
+    email,
+    otp,
+    expiry: new Date(Date.now() + 5 * 60 * 1000),
+  });
 
-    // 2️⃣ Find OTP for that email
-    const data = await OtpModel.findOne({ email, otp }).lean();
-    if (!data) {
-      return res.status(400).json({ success: false, message: "Invalid OTP" });
-    }
+  const mailSent = await sendOtpMail(email, otp);
+  if (!mailSent)
+    return res
+      .status(500)
+      .json({ success: false, message: "Failed to send OTP" });
 
-    // 3️⃣ Check expiry
-    if (data.expiry < new Date()) {
-      return res.status(400).json({ success: false, message: "OTP expired" });
-    }
-
-    // 4️⃣ Delete OTP after successful verification
-    await OtpModel.deleteOne({ _id: data._id });
-
-    return res.status(200).json({ success: true, message: "OTP verified successfully" });
-  } catch (error) {
-    console.error("OTP Verify Error:", error);
-    return res.status(500).json({ success: false, message: "OTP verification failed" });
-  }
+  res.status(200).json({ success: true, message: "OTP sent" });
 };

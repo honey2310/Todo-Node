@@ -2,14 +2,20 @@ import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
 import React from "react";
+import Toast from "./Toast";
+import { format } from "date-fns";
 
 export default function ViewBlog() {
   const { id } = useParams();
   const navigate = useNavigate();
+
   const [blog, setBlog] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [toast, setToast] = useState({ message: "", type: "" });
 
   useEffect(() => {
     const fetchBlog = async () => {
+      setLoading(true);
       try {
         const res = await axios.get(`http://localhost:4000/api/blogs/${id}`, {
           withCredentials: true,
@@ -17,13 +23,23 @@ export default function ViewBlog() {
         setBlog(res.data);
       } catch (err) {
         console.error(err);
-        alert("Failed to fetch blog");
+        setToast({
+          message: err.response?.data?.message || "Failed to fetch blog",
+          type: "error",
+        });
+      } finally {
+        setLoading(false);
       }
     };
     fetchBlog();
   }, [id]);
 
-  if (!blog) return <p className="text-center mt-20">Loading...</p>;
+  if (loading)
+    return (
+      <p className="text-center mt-20 text-[#4A4947] text-xl">Loading...</p>
+    );
+
+  if (!blog) return null; // in case fetch fails
 
   return (
     <div className="min-h-screen bg-[#FAF7F0] px-6 py-12 flex justify-center">
@@ -31,8 +47,12 @@ export default function ViewBlog() {
         {/* Blog Image */}
         <div className="flex justify-start mb-10">
           <img
-            src={`http://localhost:4000/${blog.image}`}
-            alt={blog.title}
+            src={
+              blog.image
+                ? `http://localhost:4000/${blog.image}`
+                : "https://via.placeholder.com/800x420?text=No+Image"
+            }
+            alt={blog.title || "Blog Image"}
             className="max-h-[420px] w-auto object-contain rounded-2xl"
           />
         </div>
@@ -44,9 +64,9 @@ export default function ViewBlog() {
           </h1>
 
           <div className="flex flex-wrap gap-4 text-sm text-[#6B6A67]">
-            <span>📅 {new Date(blog.createdAt).toLocaleDateString()}</span>
+            <span>📅 {format(new Date(blog.createdAt), "PPP")}</span>
             <span>⏰ {new Date(blog.createdAt).toLocaleTimeString()}</span>
-            <span>✍️ Author</span>
+            <span>✍️ {blog.author?.name || "Unknown Author"}</span>
           </div>
         </div>
 
@@ -72,6 +92,12 @@ export default function ViewBlog() {
           </span>
         </div>
       </div>
+
+      <Toast
+        message={toast.message}
+        type={toast.type}
+        onClose={() => setToast({ message: "", type: "" })}
+      />
     </div>
   );
 }

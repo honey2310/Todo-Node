@@ -1,10 +1,10 @@
 import mongoose from "mongoose";
 
-export const connetcDB = async () => {
+export const connectDB = async () => {
   try {
-    await mongoose.connect("mongodb://localhost:27017/BlogPost");
-    console.log("MongoDB Connected SuccessFully!");
+    await mongoose.connect("mongodb://127.0.0.1:27017/blogDB");
+    console.log("MongoDB connected successfully");
   } catch (err) {
-    console.log("Fail to Connect MongoDB");
+    console.error("Failed to connect to MongoDB:", err);
   }
 };

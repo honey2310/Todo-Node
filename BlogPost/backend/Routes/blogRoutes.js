@@ -10,20 +10,15 @@ import {
 import { isAuthentication } from "../Middleware/AuthMiddleware.js";
 import { upload } from "../Middleware/uploadMiddleware.js";
 
-const router = express.Router();
+const blogrouter = express.Router();
 
 /* PUBLIC */
-router.get("/", getAllBlogs);
-router.get("/:id", getBlogById);
+blogrouter.get("/", getAllBlogs);
+blogrouter.get("/:id", getBlogById);
 
 /* PROTECTED */
-router.post("/", isAuthentication, upload.single("image"), createBlog);
-router.put(
-  "/:id",
-  isAuthentication,
-  upload.fields([{ name: "image", maxCount: 1 }]),
-  updateBlog
-);
-router.delete("/:id", isAuthentication, deleteBlog);
+blogrouter.post("/", isAuthentication, upload.single("image"), createBlog);
+blogrouter.put("/:id", isAuthentication, upload.single("image"), updateBlog);
+blogrouter.delete("/:id", isAuthentication, deleteBlog);
 
-export default router;
+export default blogrouter;

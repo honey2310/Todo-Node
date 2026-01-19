@@ -13,14 +13,15 @@ const blogSchema = new mongoose.Schema(
     },
     image: {
       type: String,
+      default: "", // optional, can set a placeholder URL if desired
     },
     author: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "auth", // your Auth model name
+      ref: "User", // updated to match Auth model
       required: true,
     },
   },
   { timestamps: true }
 );
 
-export const Blog = mongoose.model("blog", blogSchema);
+export const Blog = mongoose.model("Blog", blogSchema);

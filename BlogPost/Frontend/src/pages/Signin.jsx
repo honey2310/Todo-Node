@@ -1,14 +1,12 @@
-import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import axios from "axios";
+import { useState } from "react";
+import api from "../services/api";
 import React from "react";
-import Toast from "./Toast";
 
 export default function Signin() {
   const navigate = useNavigate();
   const [form, setForm] = useState({ email: "", password: "" });
   const [loading, setLoading] = useState(false);
-  const [toast, setToast] = useState({ message: "", type: "" });
 
   const handleChange = (e) =>
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -16,36 +14,12 @@ export default function Signin() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-
     try {
-      const res = await axios.post(
-        "http://localhost:4000/signin",
-        { email: form.email, password: form.password },
-        { withCredentials: true }
-      );
-
-      if (res.data.message !== "User Signin Successfully") {
-        setToast({ message: res.data.message, type: "error" });
-        return;
-      }
-
-      // Send OTP
-      await axios.post(
-        "http://localhost:4000/send",
-        { email: form.email },
-        { withCredentials: true }
-      );
-
-      setToast({ message: "OTP sent to your email", type: "success" });
-
-      setTimeout(() => {
-        navigate("/verify", { state: { email: form.email } });
-      }, 1200);
+      const response = await api.post("/api/auth/signin", form);
+      // Pass the email to the next page so the user doesn't have to type it again
+      navigate("/verify", { state: { email: form.email } });
     } catch (err) {
-      setToast({
-        message: err.response?.data?.message || "Signin failed",
-        type: "error",
-      });
+      alert(err.response?.data?.message || "Signin failed");
     } finally {
       setLoading(false);
     }
@@ -54,13 +28,14 @@ export default function Signin() {
   return (
     <div className="min-h-screen bg-[#FAF7F0] flex items-center justify-center px-4">
       <div className="relative max-w-5xl w-full bg-white rounded-[2.5rem] shadow-2xl overflow-hidden">
+        {/* Decorative strip */}
         <div className="absolute top-0 left-0 h-full w-3 bg-[#B17457]" />
 
         <div className="grid md:grid-cols-2">
-          {/* Form */}
+          {/* LEFT FORM */}
           <div className="p-12">
             <h3 className="text-3xl font-bold text-[#4A4947] mb-8">
-              Welcome Back
+              Welcome back
             </h3>
 
             <form onSubmit={handleSubmit} className="space-y-6">
@@ -73,6 +48,7 @@ export default function Signin() {
                 required
                 className="w-full px-5 py-3 rounded-full border focus:outline-none focus:ring-2 focus:ring-[#B17457]"
               />
+
               <input
                 type="password"
                 name="password"
@@ -84,7 +60,6 @@ export default function Signin() {
               />
 
               <button
-                type="submit"
                 disabled={loading}
                 className="w-full py-3 bg-[#B17457] text-white rounded-full shadow-lg hover:opacity-90 transition disabled:opacity-50"
               >
@@ -103,10 +78,10 @@ export default function Signin() {
             </p>
           </div>
 
-          {/* Info */}
+          {/* RIGHT STORY */}
           <div className="hidden md:flex flex-col justify-center p-12 bg-[#D8D2C2]">
             <h2 className="text-4xl font-bold text-[#4A4947] mb-4">
-              Secure & Personal
+              Secure & personal
             </h2>
             <p className="text-[#4A4947] opacity-80 leading-relaxed">
               Your space to manage blogs, upload images, and write freely with
@@ -114,11 +89,6 @@ export default function Signin() {
             </p>
           </div>
         </div>
-        <Toast
-          message={toast.message}
-          type={toast.type}
-          onClose={() => setToast({ message: "", type: "" })}
-        />
       </div>
     </div>
   );

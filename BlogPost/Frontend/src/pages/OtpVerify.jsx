@@ -7,14 +7,22 @@ import Toast from "./Toast";
 export default function VerifyOtp() {
   const navigate = useNavigate();
   const location = useLocation();
-  const userEmail = location.state?.email || ""; // email from signin
+  const userEmail = location.state?.email || "";
 
   const [otp, setOtp] = useState("");
   const [loading, setLoading] = useState(false);
+  const [resendLoading, setResendLoading] = useState(false);
   const [toast, setToast] = useState({ message: "", type: "" });
 
+  // ✅ Submit OTP
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    if (!userEmail) {
+      navigate("/signin");
+      return;
+    }
+
     if (!otp) {
       setToast({ message: "Enter OTP", type: "error" });
       return;
@@ -24,16 +32,20 @@ export default function VerifyOtp() {
 
     try {
       const res = await axios.post(
-        "http://localhost:4000/verify",
-        { email: userEmail, otp },
+        "http://localhost:4000/api/auth/verify",
+        { email: userEmail.trim(), otp },
         { withCredentials: true }
       );
 
       if (res.data.success) {
-        setToast({ message: "OTP verified successfully", type: "success" });
+        setToast({ message: res.data.message, type: "success" });
+        setOtp(""); // Clear input
         setTimeout(() => navigate("/home"), 1200);
       } else {
-        alert(res.data.message || "OTP verification failed");
+        setToast({
+          message: res.data.message || "OTP verification failed",
+          type: "error",
+        });
       }
     } catch (err) {
       setToast({
@@ -42,6 +54,32 @@ export default function VerifyOtp() {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  // ✅ Resend OTP
+  const handleResend = async () => {
+    if (!userEmail) return;
+
+    setResendLoading(true);
+    try {
+      const res = await axios.post(
+        "http://localhost:4000/api/auth/send",
+        { email: userEmail.trim() },
+        { withCredentials: true }
+      );
+
+      setToast({
+        message: res.data.message || "OTP resent successfully",
+        type: res.data.success ? "success" : "error",
+      });
+    } catch (err) {
+      setToast({
+        message: err.response?.data?.message || "Failed to resend OTP",
+        type: "error",
+      });
+    } finally {
+      setResendLoading(false);
     }
   };
 
@@ -60,9 +98,10 @@ export default function VerifyOtp() {
         <form onSubmit={handleSubmit} className="space-y-6">
           <input
             type="text"
-            placeholder="Enter OTP"
+            maxLength={6}
+            inputMode="numeric"
             value={otp}
-            onChange={(e) => setOtp(e.target.value)}
+            onChange={(e) => setOtp(e.target.value.replace(/\D/g, ""))}
             required
             className="w-full px-5 py-3 rounded-full border focus:outline-none focus:ring-2 focus:ring-[#B17457] text-center text-lg tracking-widest"
           />
@@ -79,27 +118,16 @@ export default function VerifyOtp() {
         <p className="text-center text-sm text-[#4A4947] mt-6">
           Didn't receive OTP?{" "}
           <span
-            onClick={async () => {
-              setLoading(true);
-              try {
-                const resend = await axios.post(
-                  "http://localhost:4000/send",
-                  { email: userEmail },
-                  { withCredentials: true }
-                );
-                alert(resend.data.message || "OTP resent!");
-              } catch (err) {
-                alert(err.response?.data?.message || "Failed to resend OTP");
-              } finally {
-                setLoading(false);
-              }
-            }}
-            className="text-[#B17457] font-semibold cursor-pointer"
+            onClick={handleResend}
+            className={`text-[#B17457] font-semibold cursor-pointer ${
+              resendLoading ? "opacity-50 pointer-events-none" : ""
+            }`}
           >
-            Resend
+            {resendLoading ? "Resending..." : "Resend"}
           </span>
         </p>
       </div>
+
       <Toast
         message={toast.message}
         type={toast.type}

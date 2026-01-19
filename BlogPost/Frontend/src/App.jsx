@@ -28,7 +28,6 @@ function App() {
         <Route path="/signup" element={<Signup />} />
         <Route path="/blogs" element={<GuestHome />} />
         <Route path="/guest/view/:id" element={<GuestBlogView />} />
-        <Route path="/signin" element={<Signin />} />
         <Route path="/verify" element={<VerifyOtp />} />
         <Route
           path="/home"

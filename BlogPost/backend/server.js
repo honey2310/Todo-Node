@@ -1,13 +1,19 @@
 import express from "express";
 import cookieParser from "cookie-parser";
-import { connetcDB } from "./Config/db.js";
+import { connectDB } from "./Config/db.js"; // fixed typo
+import cors from "cors";
 import router from "./Routes/AuthRoutes.js";
-import blogRoutes from "./Routes/blogRoutes.js";
-import cors from 'cors'
+import blogrouter from "./Routes/blogRoutes.js";
+import dotenv from 'dotenv'
+dotenv.config();
 
 const app = express();
-connetcDB();
-const allowedOrigins = ["http://localhost:5173", "http://localhost:5174"];
+
+// Connect to MongoDB
+connectDB();
+
+// CORS setup
+const allowedOrigins = ["http://localhost:5173", "http://localhost:5174", "http://localhost:5175"];
 
 app.use(
   cors({
@@ -22,11 +28,21 @@ app.use(
   })
 );
 
+// Middlewares
 app.use(express.json());
 app.use(cookieParser());
-app.use("/uploads", express.static("uploads"));
+app.use("/uploads", express.static("uploads")); // serve images
 
-app.use("/", router);
-app.use("/api/blogs", blogRoutes);
+// Routes
+app.use("/api/auth", router);
+app.use("/api/blogs", blogrouter);
 
-app.listen(4000, () => console.log("server started successfully on 4000"));
+// Global error handler (optional but recommended)
+app.use((err, req, res, next) => {
+  console.error("Global Error:", err);
+  res.status(500).json({ success: false, message: err.message });
+});
+
+// Start server
+const PORT = process.env.PORT || 4000;
+app.listen(PORT, () => console.log(`Server started on port ${PORT}`));

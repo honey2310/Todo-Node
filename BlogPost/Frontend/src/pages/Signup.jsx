@@ -1,39 +1,24 @@
-import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import axios from "axios";
-import React from "react";
-import Toast from "./Toast";
+import { useState } from "react";
+import api from "../services/api";
+import React from 'react'
 
 export default function Signup() {
   const navigate = useNavigate();
   const [form, setForm] = useState({ name: "", email: "", password: "" });
   const [loading, setLoading] = useState(false);
-  const [toast, setToast] = useState({ message: "", type: "" });
 
-  const handleChange = (e) => {
+  const handleChange = (e) =>
     setForm({ ...form, [e.target.name]: e.target.value });
-  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     try {
-      const res = await axios.post(
-        "http://localhost:4000/signup",
-        {
-          name: form.name,
-          email: form.email,
-          password: form.password,
-        },
-        { withCredentials: true } // ⭐ important for cookies
-      );
-      setToast({ message: "Signup successful", type: "success" });
-      setTimeout(() => navigate("/signin"), 1200);
+      await api.post("/api/auth/signup", form);
+      navigate("/signin");
     } catch (err) {
-      setToast({
-        message: err.response?.data?.message || "Signup failed",
-        type: "error",
-      });
+      alert(err.response?.data?.message || "Signup failed");
     } finally {
       setLoading(false);
     }
@@ -42,22 +27,23 @@ export default function Signup() {
   return (
     <div className="min-h-screen bg-[#FAF7F0] flex items-center justify-center px-4">
       <div className="relative max-w-5xl w-full bg-white rounded-[2.5rem] shadow-2xl overflow-hidden">
+
         {/* Decorative strip */}
         <div className="absolute top-0 left-0 h-full w-3 bg-[#B17457]" />
 
         <div className="grid md:grid-cols-2">
-          {/* Left Info Panel */}
+          {/* LEFT STORY */}
           <div className="hidden md:flex flex-col justify-center p-12 bg-[#D8D2C2]">
             <h2 className="text-4xl font-bold text-[#4A4947] mb-4">
               Start your writing journey
             </h2>
             <p className="text-[#4A4947] opacity-80 leading-relaxed">
-              Create your account and join a community of thinkers, writers, and
-              readers who believe in meaningful content.
+              Create your account and join a community of thinkers, writers,
+              and readers who believe in meaningful content.
             </p>
           </div>
 
-          {/* Right Form Panel */}
+          {/* RIGHT FORM */}
           <div className="p-12">
             <h3 className="text-3xl font-bold text-[#4A4947] mb-8">
               Create Account
@@ -88,6 +74,7 @@ export default function Signup() {
                 type="password"
                 name="password"
                 placeholder="Password"
+                minLength="6"
                 value={form.password}
                 onChange={handleChange}
                 required
@@ -95,7 +82,6 @@ export default function Signup() {
               />
 
               <button
-                type="submit"
                 disabled={loading}
                 className="w-full py-3 bg-[#B17457] text-white rounded-full shadow-lg hover:opacity-90 transition disabled:opacity-50"
               >
@@ -114,11 +100,6 @@ export default function Signup() {
             </p>
           </div>
         </div>
-        <Toast
-          message={toast.message}
-          type={toast.type}
-          onClose={() => setToast({ message: "", type: "" })}
-        />
       </div>
     </div>
   );

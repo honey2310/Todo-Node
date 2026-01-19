@@ -6,20 +6,20 @@ import {
   logout
 } from "../Controllers/AuthControllers.js";
 import { sendOTP, verifyOTP } from "../Controllers/Otp_Controllers.js";
-import { isAuthentication } from "../Middleware/AuthMiddleware.js";
+import { isAuthentication } from "../Middleware/AuthMiddleware.js"; // updated
 
 const router = express.Router();
 
-// Auth routes
+// ---------- AUTH ROUTES ----------
 router.post("/signup", signup);
 router.post("/signin", signin);
-router.post("/logout", logout); // ✅ Added logout route
+router.post("/logout", logout); // logout
 
-// OTP routes
+// ---------- OTP ROUTES ----------
 router.post("/send", sendOTP);
 router.post("/verify", verifyOTP);
 
-// Protected route
+// ---------- PROTECTED ROUTE ----------
 router.get("/home", isAuthentication, home);
 
 export default router;
