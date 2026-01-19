@@ -93,7 +93,7 @@ export default function Home() {
       <div className="max-w-7xl mx-auto">
         {/* Navbar */}
         <div className="flex justify-between items-center mb-6">
-          <h1 className="text-4xl font-bold text-[#4A4947]">My Blogs</h1>
+          <h1 className="text-4xl font-bold text-[#4A4947]">🖋️ StoryStream</h1>
           <div className="flex gap-4">
             <button
               onClick={() => navigate("/create")}
