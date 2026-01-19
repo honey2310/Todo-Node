@@ -76,7 +76,7 @@
 ```text
 ├── client/
 │   ├── src/
-│   │   ├── components/  # Modal, ProtectedRoute, Navbar
+│   │   ├── components/  # Modal, ProtectedRoute
 │   │   ├── pages/       # Home, Signin, VerifyOTP, CreateBlog
 │   │   └── services/    # api.js (Axios instance)
 ├── server/
@@ -84,4 +84,7 @@
 │   ├── middleware/      # isAuthentication.js
 │   ├── models/          # Auth, Blog, and OTP Schemas
 │   ├── routes/          # Express route definitions
-│   └── uploads/         # Destination for blog images
+│   └── uploads/blogs    # Destination for blog images
+
+
+## Video
