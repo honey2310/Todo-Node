@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import React from 'react'
+import { motion, AnimatePresence } from "framer-motion";
 
 const API = "http://localhost:3000/api/books";
 
@@ -8,6 +9,8 @@ export default function App() {
   const [showForm, setShowForm] = useState(false);
   const [selectedBook, setSelectedBook] = useState(null);
   const [editId, setEditId] = useState(null);
+  const [search, setSearch] = useState("");
+
   const [form, setForm] = useState({
     title: "",
     author: "",
@@ -59,141 +62,140 @@ export default function App() {
     fetchBooks();
   };
 
-  const handleView = (book) => {
-    setSelectedBook(book);
-  };
-
-  const closeView = () => setSelectedBook(null);
+  const filteredBooks = books.filter(
+    (b) =>
+      b.title.toLowerCase().includes(search.toLowerCase()) ||
+      b.author.toLowerCase().includes(search.toLowerCase())
+  );
 
   return (
-    <div className="min-h-screen bg-gray-100 p-6">
-      <div className="max-w-6xl mx-auto">
-        <div className="flex justify-between items-center mb-6">
-          <h1 className="text-3xl font-bold">📚 Book Store</h1>
-          <button
-            onClick={() => setShowForm(true)}
-            className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
-          >
-            + Add Book
-          </button>
-        </div>
+    <div className="min-h-screen bg-gradient-to-br from-slate-100 to-slate-200">
 
+      {/* HEADER */}
+      <header className="sticky top-0 z-50 backdrop-blur bg-white/70 border-b">
+        <div className="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
+          <h1 className="text-3xl font-extrabold">📚 BookVerse</h1>
+
+          <div className="flex gap-3">
+            <input
+              type="text"
+              placeholder="Search books..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="px-4 py-2 rounded-lg border focus:ring-2 focus:ring-slate-400"
+            />
+            <button
+              onClick={() => setShowForm(true)}
+              className="bg-slate-900 text-white px-5 py-2 rounded-lg hover:bg-slate-800"
+            >
+              + Add Book
+            </button>
+          </div>
+        </div>
+      </header>
+
+      {/* FORM */}
+      <AnimatePresence>
         {showForm && (
-          <div className="bg-white p-4 rounded shadow mb-6">
-            <form onSubmit={handleSubmit} className="grid grid-cols-2 gap-4">
-              <input
-                type="text"
-                name="title"
-                placeholder="Title"
-                value={form.title}
-                onChange={handleChange}
-                required
-                className="border p-2 rounded"
-              />
-              <input
-                type="text"
-                name="author"
-                placeholder="Author"
-                value={form.author}
-                onChange={handleChange}
-                required
-                className="border p-2 rounded"
-              />
-              <input
-                type="number"
-                name="price"
-                placeholder="Price"
-                value={form.price}
-                onChange={handleChange}
-                required
-                className="border p-2 rounded"
-              />
-              <input
-                type="file"
-                name="coverImage"
-                onChange={handleChange}
-                className="border p-2 rounded"
-              />
+          <motion.div
+            initial={{ opacity: 0, y: -30 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -30 }}
+            className="max-w-4xl mx-auto mt-10 bg-white p-6 rounded-2xl shadow-xl"
+          >
+            <h2 className="text-xl font-semibold mb-4">
+              {editId ? "Edit Book" : "Add New Book"}
+            </h2>
+
+            <form onSubmit={handleSubmit} className="grid md:grid-cols-2 gap-4">
+              <input name="title" value={form.title} onChange={handleChange} placeholder="Title" className="border px-4 py-2 rounded-lg" required />
+              <input name="author" value={form.author} onChange={handleChange} placeholder="Author" className="border px-4 py-2 rounded-lg" required />
+              <input name="price" type="number" value={form.price} onChange={handleChange} placeholder="Price" className="border px-4 py-2 rounded-lg" required />
+              <input name="coverImage" type="file" onChange={handleChange} className="border px-4 py-2 rounded-lg" />
+
               <div className="col-span-2 flex gap-3">
-                <button className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">
-                  Save
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setShowForm(false)}
-                  className="bg-gray-400 text-white px-4 py-2 rounded"
-                >
+                <button className="bg-green-600 text-white px-6 py-2 rounded-lg">Save</button>
+                <button type="button" onClick={() => setShowForm(false)} className="bg-gray-300 px-6 py-2 rounded-lg">
                   Cancel
                 </button>
               </div>
             </form>
-          </div>
+          </motion.div>
         )}
+      </AnimatePresence>
 
-        {selectedBook && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg max-w-md w-full p-6">
-              <img
-                src={`http://localhost:3000/${selectedBook.coverImage}`}
-                alt={selectedBook.title}
-                className="h-64 w-full object-contain bg-gray-50 rounded mb-4"
-              />
-              <h2 className="text-2xl font-bold mb-2">{selectedBook.title}</h2>
-              <p className="text-gray-600 mb-1"><strong>Author:</strong> {selectedBook.author}</p>
-              <p className="text-gray-600 mb-1"><strong>Price:</strong> ₹{selectedBook.price}</p>
-              <p className="text-gray-700 mt-3">
-                This book is part of our professionally curated collection, offering high-quality content and excellent reading experience.
-              </p>
-              <button
-                onClick={closeView}
-                className="mt-4 bg-blue-600 text-white px-4 py-2 rounded"
-              >
-                Close
-              </button>
-            </div>
-          </div>
-        )}
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {books.map((book) => (
-            <div key={book._id} className="bg-white rounded shadow hover:shadow-lg transition">
+      {/* BOOK GRID */}
+      <main className="max-w-7xl mx-auto px-6 py-12 grid sm:grid-cols-2 lg:grid-cols-4 gap-8">
+        <AnimatePresence>
+          {filteredBooks.map((book) => (
+            <motion.div
+              key={book._id}
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0 }}
+              whileHover={{ scale: 1.05 }}
+              className="bg-white rounded-2xl shadow-xl overflow-hidden"
+            >
               <img
                 src={`http://localhost:3000/${book.coverImage}`}
                 alt={book.title}
-                className="h-60 w-full object-contain bg-gray-50 rounded-t p-2"
+                className="h-64 w-full object-contain bg-slate-50 p-4"
               />
+
               <div className="p-4">
-                <h2 className="text-xl font-semibold">{book.title}</h2>
-                <p className="text-sm text-gray-500 mt-1">Author: {book.author}</p>
-                <p className="text-sm text-gray-600 mt-1">
-                  A professionally curated book available in our store.
-                </p>
+                <h3 className="font-semibold text-lg">{book.title}</h3>
+                <p className="text-sm text-gray-500">{book.author}</p>
                 <p className="font-bold mt-2">₹{book.price}</p>
+
                 <div className="flex gap-2 mt-4">
-                  <button
-                    onClick={() => handleView(book)}
-                    className="bg-blue-500 text-white px-3 py-1 rounded"
-                  >
+                  <button onClick={() => setSelectedBook(book)} className="flex-1 bg-slate-800 text-white rounded-lg py-1">
                     View
                   </button>
-                  <button
-                    onClick={() => handleEdit(book)}
-                    className="bg-yellow-500 text-white px-3 py-1 rounded"
-                  >
+                  <button onClick={() => handleEdit(book)} className="bg-yellow-400 px-3 rounded-lg">
                     Edit
                   </button>
-                  <button
-                    onClick={() => handleDelete(book._id)}
-                    className="bg-red-600 text-white px-3 py-1 rounded"
-                  >
-                    Delete
+                  <button onClick={() => handleDelete(book._id)} className="bg-red-500 text-white px-3 rounded-lg">
+                    Del
                   </button>
                 </div>
               </div>
-            </div>
+            </motion.div>
           ))}
-        </div>
-      </div>
+        </AnimatePresence>
+      </main>
+
+      {/* VIEW MODAL */}
+      <AnimatePresence>
+        {selectedBook && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/60 flex items-center justify-center z-50"
+          >
+            <motion.div
+              initial={{ scale: 0.8 }}
+              animate={{ scale: 1 }}
+              className="bg-white rounded-2xl p-6 max-w-md w-full shadow-2xl"
+            >
+              <img
+                src={`http://localhost:3000/${selectedBook.coverImage}`}
+                className="h-72 w-full object-contain bg-slate-50 rounded-lg mb-4"
+              />
+              <h2 className="text-2xl font-bold">{selectedBook.title}</h2>
+              <p className="text-gray-600">{selectedBook.author}</p>
+              <p className="text-xl font-semibold mt-2">₹{selectedBook.price}</p>
+
+              <button
+                onClick={() => setSelectedBook(null)}
+                className="mt-5 w-full bg-slate-900 text-white py-2 rounded-lg"
+              >
+                Close
+              </button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
