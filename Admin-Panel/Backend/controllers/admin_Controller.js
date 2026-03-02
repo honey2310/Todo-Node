@@ -1,11 +1,16 @@
 import { userCollection } from "../models/user_Model.js";
+import jwt from "jsonwebtoken";
 
 export const getAllUser = async (req, res) => {
   try {
-    const user = await userCollection.findOne();
-    res.json({ status: true, message: "All user Fetch successfully!!" });
+    const users = await userCollection.find();
+    res.json({
+      status: true,
+      message: "All users fetched successfully",
+      users,
+    });
   } catch (err) {
-    res.json({ status: false, message: "Fail to fetch users!!" });
+    res.json({ status: false, message: "Fail to fetch users" });
   }
 };
 
@@ -35,13 +40,22 @@ export const updateuser = async (req, res) => {
 export const getcurrentuser = async (req, res) => {
   try {
     const token = req.cookies.auth_token;
-    console.log(token);
+
+    if (!token) return res.json({ status: false, message: "No token" });
+
     const decoded = jwt.verify(token, process.env.SECRET_KEY);
-    console.log(decoded._doc);
+
+    // ✅ fetch profile from DB
+    const user = await userCollection.findOne({
+      email: decoded.email,
+    });
+
     return res.json({
       status: true,
-      message: "user fetched successfully",
-      user: decoded._doc,
+      user: {
+        ...decoded,
+        ...user?._doc, // merge auth + profile
+      },
     });
   } catch (err) {
     return res.json({ status: false, message: err.message });

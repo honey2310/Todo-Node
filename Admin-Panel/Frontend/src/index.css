@@ -1,37 +1,9 @@
 @import "tailwindcss";
 
-@keyframes scaleIn {
+@keyframes fadeUp {
   from {
     opacity: 0;
-    transform: scale(0.92);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1);
-  }
-}
-
-.animate-scaleIn {
-  animation: scaleIn 1s ease-out;
-}
-
-@keyframes float {
-  0%, 100% {
-    transform: translateY(0);
-  }
-  50% {
-    transform: translateY(-6px);
-  }
-}
-
-.animate-float {
-  animation: float 2.5s ease-in-out infinite;
-}
-
-@keyframes fadeSlide {
-  from {
-    opacity: 0;
-    transform: translateY(16px);
+    transform: translateY(20px);
   }
   to {
     opacity: 1;
@@ -39,17 +11,19 @@
   }
 }
 
-.animate-fadeSlide {
-  animation: fadeSlide 0.8s ease-out;
+.animate-fadeUp {
+  animation: fadeUp 1s ease-out forwards;
 }
 
-.input {
-  @apply w-full px-4 py-2.5 border rounded-lg mb-4 
-  focus:outline-none focus:border-[#4988C4];
+@keyframes loader {
+  0% {
+    width: 0%;
+  }
+  100% {
+    width: 100%;
+  }
 }
 
-.btn-primary {
-  @apply w-full bg-[#1C4D8D] hover:bg-[#0F2854] 
-  text-white py-2.5 rounded-lg font-medium transition;
+.animate-loader {
+  animation: loader 3s linear forwards;
 }
-

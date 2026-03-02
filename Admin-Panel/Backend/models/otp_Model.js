@@ -1,10 +1,10 @@
 import mongoose from "mongoose";
-import moduleName from "mongoose";
 
 const otpSchema = new mongoose.Schema(
   {
-    email: String,
-    otp: Number,
+    email: { type: String, required: true },
+    otp: { type: String, required: true },
+    role: { type: String, required: true },
     expiry: Date,
   },
   { timestamps: true },

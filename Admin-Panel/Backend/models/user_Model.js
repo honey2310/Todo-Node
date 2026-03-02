@@ -2,15 +2,15 @@ import mongoose from "mongoose";
 
 const userSchema = new mongoose.Schema(
   {
-    email: String,
+    email: { type: String, unique: true, required: true },
     name: String,
     education: String,
-    phone: String,
-    location: String,
-    birthdate: Number,
+    phone: { type: String, unique: true, sparse: true },
+    birthdate: String,
     image: String,
+    location:String
   },
-  { timestamps: true },
+  { timestamps: true }
 );
 
 export const userCollection = mongoose.model("user", userSchema);

@@ -4,103 +4,194 @@ import { sendOTP } from "../services/otp_services.js";
 import { OtpCollection } from "../models/otp_Model.js";
 import jwt from "jsonwebtoken";
 import cookieParser from "cookie-parser";
+import { userCollection } from "../models/user_Model.js";
+import { donorCollection } from "../models/donor_Model.js";
+import { hospitalCollection } from "../models/hospitalModel.js";
 
 export const signup = async (req, res) => {
-  const { email, password, name } = req.body;
+  const { email, password, name, role } = req.body;
+
   try {
+    if (role === "admin") {
+      return res.json({
+        status: false,
+        message: "Admin account cannot be created here",
+      });
+    }
+
     const existingUser = await authCollection.findOne({ email });
     if (existingUser) {
-      return res.json({ status: false, message: "User Register Already!" });
+      return res.json({
+        status: false,
+        message: "User already registered",
+      });
     }
 
     const hashedPassword = await bcrypt.hash(password, 12);
-    await authCollection.create({ name, email, password: hashedPassword });
-    res.json({ status: true, message: "User Register Successfully!" });
+
+    const newUser = await authCollection.create({
+      name,
+      email,
+      password: hashedPassword,
+      role: role || "donor",
+      isApproved: role === "donor",
+    });
+
+    // 🔥 CREATE EMPTY DONOR PROFILE
+    if (newUser.role === "donor") {
+      await donorCollection.create({
+        auth: newUser._id,
+      });
+    }
+
+    res.json({
+      status: true,
+      message:
+        role === "hospital"
+          ? "Hospital registered. Waiting for admin approval."
+          : "Signup successful!",
+    });
   } catch (err) {
-    console.log("Signup Fail", err);
-    res.json({ status: false, message: "User Registeration Failed!" });
+    console.log("Signup Error:", err); // 🔥 log the real error
+    res.json({ status: false, message: err.message });
   }
 };
 
 export const signin = async (req, res) => {
-  const { email, password } = req.body;
+  const { email, password, role } = req.body;
+
   try {
-    const user = await authCollection.findOne({ email });
-    if (!user) {
+    if (!email || !password || !role) {
+      return res.json({ status: false, message: "Missing fields" });
+    }
+
+    // ❌ Donor cannot signin using email anymore
+    if (role === "donor") {
       return res.json({
         status: false,
-        message: "Invalid User ! Please enter valid email or register first !!",
+        message: "Donor login uses phone OTP",
+      });
+    }
+
+    const user = await authCollection.findOne({ email, role });
+
+    if (!user) return res.json({ status: false, message: "User not found" });
+
+    // hospital approval check
+    if (user.role === "hospital" && !user.isApproved) {
+      return res.json({
+        status: false,
+        message: "Waiting for admin approval",
       });
     }
 
     const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) {
-      return res.json({
-        status: false,
-        message: "Invalid Password ! Try Again",
-      });
-    }
+    if (!isMatch)
+      return res.json({ status: false, message: "Invalid password" });
 
-    const status = await sendOTP(email);
-    if (status) {
-      res.json({ status: true, message: "OTP sent successfully!!" });
-    } else {
-      res.json({ status: false, message: "OTP fail to sent!" });
-    }
+    // send OTP (email OTP only for admin/hospital)
+    const otpSent = await sendOTP(email, role);
+
+    if (!otpSent)
+      return res.json({ status: false, message: "Failed to send OTP" });
+
+    res.json({
+      status: true,
+      message: "OTP sent successfully",
+      user: {
+        email: user.email,
+        role: user.role,
+        name: user.name,
+      },
+    });
   } catch (err) {
-    console.log("Signin Fail", err);
-    res.json({ status: false, message: "Signin Fail" });
+    console.error("Signin error:", err);
+    res.json({ status: false, message: "Signin failed" });
   }
 };
 
 export const verifyOtp = async (req, res) => {
-  const { email, otp } = req.body;
+  const { email, otp, role } = req.body;
 
   try {
-    const record = await OtpCollection.findOne({ email, otp });
-    if (!record) {
-      return res.json({ status: false, message: "Invalid OTP" });
-    }
+    const record = await OtpCollection.findOne({
+      email,
+      otp: otp.toString(),
+      role,
+    });
 
-    if (record.expiry < Date.now()) {
-      return res.json({ status: false, message: "OTP Expired!" });
-    }
+    if (!record) return res.json({ status: false, message: "Invalid OTP" });
 
-    await OtpCollection.deleteMany({ email });
+    if (record.expiry < Date.now())
+      return res.json({ status: false, message: "OTP expired" });
+
+    await OtpCollection.deleteMany({ email, role });
 
     const user = await authCollection.findOne({ email });
-    if (!user) {
-      return res.json({ status: false, message: "User not found" });
+
+    if (!user) return res.json({ status: false, message: "User not found" });
+
+    // ✅ Only hospital profile creation remains
+    if (user.role === "hospital") {
+      const existingHospital = await hospitalCollection.findOne({
+        email: user.email,
+      });
+
+      if (!existingHospital) {
+        await hospitalCollection.create({
+          email: user.email,
+          name: user.name || "",
+        });
+      }
     }
 
+    // JWT token
     const token = jwt.sign(
-      { id: user._id, email: user.email, name: user.name },
-      process.env.SECERT_KEY,
+      {
+        id: user._id,
+        email: user.email,
+        role: user.role,
+      },
+      process.env.SECRET_KEY,
       { expiresIn: "1d" },
     );
 
     res.cookie("auth_token", token, {
-      maxAge: 1000 * 60 * 60,
       httpOnly: true,
       sameSite: "lax",
     });
 
     res.json({
       status: true,
-      message: "OTP Verified & Signin Successfully!",
+      message: "OTP verified successfully",
+      user: { role: user.role, email: user.email },
     });
   } catch (err) {
+    console.error("OTP Verification Error:", err);
     res.json({
       status: false,
-      message: "Otp Verification Failed!",
-      err: err.message,
+      message: "OTP verification failed",
     });
   }
 };
 
-export const signout = async (req, res) => {
-  res.clearCookie("auth_token");
-  res.json({ status: true, message: "Signout Successfully!" });
+export const logout = async (req, res) => {
+  try {
+    res.clearCookie("auth_token", {
+      httpOnly: true,
+      sameSite: "lax",
+    });
+
+    return res.json({
+      status: true,
+      message: "Logged out successfully",
+    });
+  } catch (err) {
+    return res.json({
+      status: false,
+      message: "Logout failed",
+    });
+  }
 };
 
 export const checkUserStatus = async (req, res) => {
@@ -115,7 +206,7 @@ export const checkUserStatus = async (req, res) => {
     return res.json({
       status: true,
       message: "Already Logged In",
-      user: decoded.payload,
+      user: decoded,
     });
   } catch (err) {
     return res.json({
@@ -170,12 +261,13 @@ export const changeCurrentPassword = async (req, res) => {
 export const forgetPassword = async (req, res) => {
   const { email } = req.body;
   try {
-    const status = await sendOTP(email);
+    await sendOTP(email, "password_reset");
     res.json({ status: true, message: "otp sent to your mail" });
   } catch (err) {
     res.json({ status: false, message: err.message });
   }
 };
+
 export const setNewPassword = async (req, res) => {
   const { email, otp, password } = req.body;
   try {
@@ -203,4 +295,143 @@ export const setNewPassword = async (req, res) => {
   } catch (err) {
     res.json({ status: false, message: err.message });
   }
+};
+
+export const getPendingHospitals = async (req, res) => {
+  try {
+    const hospitals = await authCollection
+      .find({
+        role: "hospital",
+        isApproved: false,
+      })
+      .select("name email createdAt");
+
+    res.json({ status: true, hospitals });
+  } catch (err) {
+    res.json({ status: false, message: err.message });
+  }
+};
+
+export const approveHospital = async (req, res) => {
+  const { id } = req.body;
+
+  try {
+    await authCollection.updateOne(
+      { _id: id, role: "hospital" },
+      { $set: { isApproved: true } },
+    );
+
+    res.json({
+      status: true,
+      message: "Hospital Approved Successfully",
+    });
+  } catch (err) {
+    res.json({ status: false, message: err.message });
+  }
+};
+
+export const getDashboardStats = async (req, res) => {
+  try {
+    // total donors
+    const totalDonors = await authCollection.countDocuments({
+      role: "donor",
+    });
+
+    // approved hospitals only
+    const totalHospitals = await authCollection.countDocuments({
+      role: "hospital",
+      isApproved: true,
+    });
+
+    // temporary values (until modules built)
+    const bloodUnits = 0;
+    const emergencyAlerts = 0;
+
+    res.json({
+      status: true,
+      stats: {
+        totalDonors,
+        totalHospitals,
+        bloodUnits,
+        emergencyAlerts,
+      },
+    });
+  } catch (err) {
+    res.json({
+      status: false,
+      message: err.message,
+    });
+  }
+};
+
+export const sendPhoneOtp = async (req, res) => {
+  const { phone } = req.body;
+
+  if (!phone) return res.json({ status: false, message: "Phone required" });
+
+  const otpSent = await sendOTP(phone, "donor_phone"); // reuse service
+
+  if (!otpSent) return res.json({ status: false, message: "OTP failed" });
+
+  res.json({
+    status: true,
+    message: "OTP sent",
+  });
+};
+
+export const verifyPhoneOtp = async (req, res) => {
+  const { phone, otp } = req.body;
+
+  const record = await OtpCollection.findOne({
+    email: phone,
+    otp: otp.toString(),
+    role: "donor_phone",
+  });
+
+  if (!record) return res.json({ status: false, message: "Invalid OTP" });
+
+  if (record.expiry < Date.now())
+    return res.json({ status: false, message: "OTP expired" });
+
+  await OtpCollection.deleteMany({
+    email: phone,
+    role: "donor_phone",
+  });
+
+  // find or create donor auth
+  let user = await authCollection.findOne({
+    phone,
+    role: "donor",
+  });
+
+  if (!user) {
+    user = await authCollection.create({
+      phone,
+      role: "donor",
+      isApproved: true,
+    });
+
+    // create donor profile automatically
+    await donorCollection.create({
+      auth: user._id,
+      phone,
+    });
+  }
+
+  const token = jwt.sign(
+    { id: user._id, role: user.role },
+    process.env.SECRET_KEY,
+    { expiresIn: "1d" },
+  );
+
+  res.cookie("auth_token", token, {
+    httpOnly: true,
+    sameSite: "lax",
+  });
+
+  res.json({
+    status: true,
+    message: "Donor login successful",
+    user: { role: "donor" },
+  });
 };

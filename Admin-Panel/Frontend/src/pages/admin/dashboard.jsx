@@ -1,196 +1,455 @@
-import React, { useState } from "react";
+import React from "react";
 import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  PieChart, Pie, Cell, AreaChart, Area
-} from "recharts";
-import { 
-  ShieldCheck, AlertCircle, Clock, CheckCircle, 
-  Filter, Search, UserPlus, Settings, LayoutDashboard, 
-  MessageSquare, Users, Trash2, Edit3, MoreHorizontal
+  Users,
+  Droplet,
+  Building2,
+  AlertTriangle,
+  TrendingUp,
+  ArrowUpRight,
+  Activity,
+  Clock,
+  ChevronRight,
+  ShieldCheck,
+  Zap,
+  Mail,
+  Globe,
+  X,
 } from "lucide-react";
+import { useEffect, useState } from "react";
+import axios from "axios";
+import { base_url } from "../../utils/global_var";
 
-const COLORS = ["#EF4444", "#F59E0B", "#10B981", "#3B82F6"]; // Red, Amber, Emerald, Blue
+const MainDashboard = () => {
+  const [pendingHospitals, setPendingHospitals] = useState([]);
+  const [stats, setStats] = useState(null);
+  const [inventory, setInventory] = useState({});
+  const [currentTime, setCurrentTime] = useState(new Date());
 
-export default function CMSDashboard() {
-  // Mock Data for Categories
-  const categoryData = [
-    { name: "Technical", value: 45 },
-    { name: "Account", value: 25 },
-    { name: "Facility", value: 20 },
-    { name: "Others", value: 10 },
-  ];
+  useEffect(() => {
+    fetchDashboardStats();
+    fetchPending();
+    const timer = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 1000);
 
-  const complaints = [
-    { id: "CMP-1024", user: "John Doe", category: "Technical", priority: "High", status: "Pending", date: "2 mins ago" },
-    { id: "CMP-1025", user: "Jane Smith", category: "Account", priority: "Medium", status: "In Progress", date: "1 hour ago" },
-    { id: "CMP-1026", user: "Mike Ross", category: "Facility", priority: "Low", status: "Resolved", date: "5 hours ago" },
-  ];
+    return () => clearInterval(timer);
+  }, []);
+
+  const fetchPending = async () => {
+    const res = await axios.get(`${base_url}/auth/pending-hospitals`);
+    if (res.data.status) {
+      setPendingHospitals(res.data.hospitals);
+    }
+  };
+
+  const approveHospital = async (id) => {
+    try {
+      const res = await axios.post(`${base_url}/auth/approve-hospital`, { id });
+      if (res.data.status) {
+        // Filter the list locally so it disappears immediately
+        setPendingHospitals((prev) => prev.filter((h) => h._id !== id));
+        alert("Node Authorized Successfully");
+      }
+    } catch (err) {
+      console.error("Approval failed", err);
+      alert(
+        "Authorization protocol failed: " +
+          (err.response?.data?.message || "Server Error"),
+      );
+    }
+  };
+
+  const fetchDashboardStats = async () => {
+    try {
+      const res = await axios.get(`${base_url}/dashboard/dashboard-stats`);
+
+      if (res.data.status) {
+        setStats(res.data.stats);
+        setInventory(res.data.inventory); // ⭐ inventory units
+      }
+    } catch (err) {
+      console.log(err);
+    }
+  };
 
   return (
-    <div className="flex min-h-screen bg-[#F3F4F6]">
-      {/* SIDEBAR - ROLE CONTROL SECTION */}
-      <aside className="w-64 bg-[#0F2854] text-white hidden lg:flex flex-col sticky top-0 h-screen">
-        <div className="p-6 border-b border-white/10 flex items-center gap-2">
-          <ShieldCheck className="text-[#BDE8F5]" />
-          <span className="text-xl font-bold tracking-tight">IT-HelpDesk</span>
+    <div className="max-w-7xl mx-auto space-y-8 animate-in fade-in duration-700 pb-12">
+      {/* 1. WELCOME & DATE */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
+        <div>
+          <div className="flex items-center gap-2 mb-2">
+            <div className="w-8 h-8 bg-[#B354A6] rounded-lg flex items-center justify-center text-white shadow-lg shadow-[#B354A6]/20">
+              <ShieldCheck size={18} />
+            </div>
+            <span className="text-[10px] font-black text-[#B354A6] uppercase tracking-[0.2em]">
+              Secure Node 01
+            </span>
+          </div>
+          <h1 className="text-3xl font-black text-slate-900 tracking-tight">
+            Network <span className="text-[#B354A6]">Intelligence</span>
+          </h1>
+          <p className="text-sm text-slate-500 font-medium">
+            System pulse is optimal. 4 priority requests pending review.
+          </p>
         </div>
-        
-        <nav className="flex-1 p-4 space-y-1">
-          <p className="text-[10px] uppercase text-gray-400 font-bold px-3 mb-2">Main Menu</p>
-          <NavItem icon={<LayoutDashboard size={18}/>} label="Command Center" active />
-          <NavItem icon={<MessageSquare size={18}/>} label="View Complaints" />
-          <NavItem icon={<Users size={18}/>} label="User Management" />
-          
-          <p className="text-[10px] uppercase text-gray-400 font-bold px-3 mt-6 mb-2">System Control</p>
-          <NavItem icon={<Settings size={18}/>} label="Departments" />
-          <NavItem icon={<ShieldCheck size={18}/>} label="Roles & Permissions" />
-        </nav>
-
-        <div className="p-4 bg-white/5 m-4 rounded-xl">
-          <p className="text-xs text-gray-400">Logged in as</p>
-          <p className="text-sm font-bold">Admin Authority</p>
+        <div className="bg-white px-5 py-3 rounded-2xl border border-slate-100 shadow-sm hidden md:block">
+          <div className="flex items-center gap-2 text-slate-400 font-bold text-[9px] uppercase tracking-[0.2em] mb-1">
+            <Clock size={12} className="text-[#B354A6]" /> Live System Time
+          </div>
+          <p className="text-sm font-black text-slate-900 italic">
+            {currentTime.toLocaleDateString("en-US", {
+              month: "short",
+              day: "2-digit",
+              year: "numeric",
+            })}{" "}
+            •{" "}
+            {currentTime.toLocaleTimeString("en-US", {
+              hour: "2-digit",
+              minute: "2-digit",
+              second: "2-digit",
+            })}
+          </p>
         </div>
-      </aside>
+      </div>
 
-      {/* MAIN CONTENT AREA */}
-      <main className="flex-1 overflow-x-hidden">
-        {/* TOP BAR - SEARCH & QUICK ACTIONS */}
-        <header className="bg-white h-16 border-b px-8 flex items-center justify-between sticky top-0 z-20">
-          <div className="flex items-center bg-gray-100 px-4 py-2 rounded-lg w-96">
-            <Search size={16} className="text-gray-400" />
-            <input type="text" placeholder="Search by Ticket ID or User..." className="bg-transparent border-none focus:ring-0 text-sm w-full ml-2" />
-          </div>
-          <div className="flex items-center gap-4">
-            <button className="bg-[#0F2854] text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 hover:bg-[#1C4D8D] transition">
-              <UserPlus size={16} /> Assign Staff
-            </button>
-          </div>
-        </header>
+      {/* 2. TOP LEVEL STATS */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <SummaryCard
+          label="Network Donors"
+          value={stats?.totalDonors || 0}
+          change="+12.4%"
+          icon={<Users />}
+          color="text-[#B354A6]"
+          bg="bg-[#B354A6]/5"
+        />
+        <SummaryCard
+          label="Global Inventory"
+          value={stats?.bloodUnits || 0}
+          change="Optimal"
+          icon={<Droplet />}
+          color="text-rose-500"
+          bg="bg-rose-50"
+        />
+        <SummaryCard
+          label="Active Facilities"
+          value={stats?.totalHospitals || 0}
+          change="Online"
+          icon={<Building2 />}
+          color="text-indigo-600"
+          bg="bg-indigo-50"
+        />
+        <SummaryCard
+          label="Emergency Alerts"
+          value={stats?.emergencyAlerts || 0}
+          change="Priority"
+          icon={<AlertTriangle />}
+          color="text-amber-600"
+          bg="bg-amber-50"
+          isAlert
+        />
+      </div>
 
-        <div className="p-8 space-y-8">
-          {/* WORKFLOW STATS CARDS */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <StatCard title="Total Filed" value="248" icon={<MessageSquare />} color="text-blue-600" bg="bg-blue-50" />
-            <StatCard title="Pending" value="42" icon={<Clock />} color="text-red-600" bg="bg-red-50" />
-            <StatCard title="In Progress" value="18" icon={<AlertCircle />} color="text-amber-600" bg="bg-amber-50" />
-            <StatCard title="Resolved" value="188" icon={<CheckCircle />} color="text-emerald-600" bg="bg-emerald-50" />
-          </div>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        {/* 3. STOCK ANALYTICS */}
+        <div className="lg:col-span-2 space-y-8">
+          <div className="bg-white rounded-[3rem] border border-slate-100 p-10 shadow-sm relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-[#B354A6]/5 rounded-full blur-3xl -translate-y-12 translate-x-12" />
 
-          {/* DATA VISUALIZATION SECTION */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* COMPLAINT TRENDS */}
-            <div className="lg:col-span-2 bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-              <div className="flex justify-between items-center mb-6">
-                <h3 className="font-bold text-[#0F2854]">Monthly Stats</h3>
-                <span className="text-xs text-gray-400">SLA: 94.2% Resolution Rate</span>
-              </div>
-              <ResponsiveContainer width="100%" height={250}>
-                <AreaChart data={[{m:'Jan', v:40}, {m:'Feb', v:30}, {m:'Mar', v:65}, {m:'Apr', v:45}, {m:'May', v:80}]}>
-                  <XAxis dataKey="m" hide />
-                  <Tooltip />
-                  <Area type="monotone" dataKey="v" stroke="#0F2854" fill="#BDE8F5" strokeWidth={3} />
-                </AreaChart>
-              </ResponsiveContainer>
+            <div className="flex justify-between items-center mb-10 relative z-10">
+              <h3 className="text-lg font-black text-slate-900 flex items-center gap-3">
+                <Activity size={20} className="text-[#B354A6]" /> Stock
+                Distribution
+              </h3>
+              <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest">
+                Unit Capacity %
+              </span>
             </div>
 
-            {/* CATEGORY DISTRIBUTION */}
-            <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-              <h3 className="font-bold text-[#0F2854] mb-4">By Department</h3>
-              <ResponsiveContainer width="100%" height={200}>
-                <PieChart>
-                  <Pie data={categoryData} innerRadius={60} outerRadius={80} dataKey="value">
-                    {categoryData.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
-                  </Pie>
-                  <Tooltip />
-                </PieChart>
-              </ResponsiveContainer>
-              <div className="grid grid-cols-2 gap-2 mt-4">
-                {categoryData.map((c, i) => (
-                  <div key={i} className="flex items-center gap-2 text-[11px] text-gray-500 font-medium">
-                    <div className="w-2 h-2 rounded-full" style={{backgroundColor: COLORS[i]}} />
-                    {c.name}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-x-8 gap-y-12 relative z-10">
+              <StockMeter
+                group="O+"
+                percentage={inventory["O+"] || 0}
+                color="text-emerald-500"
+              />
+              <StockMeter
+                group="O-"
+                percentage={inventory["O-"] || 0}
+                color="text-[#B354A6]"
+              />
+              <StockMeter
+                group="A+"
+                percentage={inventory["A+"] || 0}
+                color="text-indigo-500"
+              />
+              <StockMeter
+                group="A-"
+                percentage={inventory["A-"] || 0}
+                color="text-amber-500"
+              />
+              <StockMeter
+                group="B+"
+                percentage={inventory["B+"] || 0}
+                color="text-indigo-500"
+              />
+              <StockMeter
+                group="B-"
+                percentage={inventory["B-"] || 0}
+                color="text-[#B354A6]"
+              />
+              <StockMeter
+                group="AB+"
+                percentage={inventory["AB+"] || 0}
+                color="text-emerald-500"
+              />
+              <StockMeter
+                group="AB-"
+                percentage={inventory["AB-"] || 0}
+                color="text-[#B354A6]"
+              />
+            </div>
+          </div>
+
+          {/* LOGISTICS FEED */}
+          <div className="bg-white rounded-[3rem] border border-slate-100 p-10 shadow-sm">
+            <h3 className="text-lg font-black text-slate-900 mb-8 flex items-center gap-3">
+              <Zap size={20} className="text-amber-500" /> Live Logistics Feed
+            </h3>
+            <div className="space-y-2">
+              <ShipmentItem
+                hospital="City General"
+                units="4u (O-)"
+                time="24 mins ago"
+                status="Delivered"
+              />
+              <ShipmentItem
+                hospital="St. Mary's Clinic"
+                units="10u (A+)"
+                time="1 hour ago"
+                status="In Transit"
+              />
+              <ShipmentItem
+                hospital="Rotary Blood Hub"
+                units="15u (B+)"
+                time="3 hours ago"
+                status="Delivered"
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* 4. COMMAND SIDEBAR */}
+        <div className="space-y-8">
+          <div className="bg-slate-900 rounded-[3rem] p-10 text-white shadow-2xl relative overflow-hidden">
+            <div className="absolute -bottom-10 -left-10 w-40 h-40 bg-[#B354A6]/20 rounded-full blur-[60px]" />
+
+            <h3 className="text-[10px] font-black text-slate-500 uppercase tracking-[0.3em] mb-8">
+              System Commands
+            </h3>
+            <div className="space-y-4 relative z-10">
+              <button className="w-full flex items-center justify-between p-5 bg-white/5 hover:bg-[#B354A6] border border-white/10 rounded-2xl transition-all group">
+                <span className="text-xs font-black uppercase tracking-widest">
+                  Broadcast Emergency
+                </span>
+                <ArrowUpRight
+                  size={18}
+                  className="text-[#B354A6] group-hover:text-white group-hover:translate-x-1 transition-all"
+                />
+              </button>
+              <button className="w-full flex items-center justify-between p-5 bg-white/5 hover:bg-white/10 border border-white/10 rounded-2xl transition-all group">
+                <span className="text-xs font-black uppercase tracking-widest">
+                  New Donation Drive
+                </span>
+                <ArrowUpRight
+                  size={18}
+                  className="text-slate-500 group-hover:translate-x-1 transition-all"
+                />
+              </button>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-[3rem] border border-slate-100 p-10 shadow-sm">
+            <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] mb-8">
+              Node Metrics
+            </h3>
+            <div className="space-y-8">
+              <HealthMetric
+                label="Storage Temp"
+                value="2.4°C"
+                status="Stable"
+                color="bg-emerald-500"
+              />
+              <HealthMetric
+                label="Chain Sync"
+                value="Verified"
+                status="Secure"
+                color="bg-[#B354A6]"
+              />
+              <HealthMetric
+                label="Active Hubs"
+                value="12 Units"
+                status="Active"
+                color="bg-emerald-500"
+              />
+            </div>
+          </div>
+
+          {/* Add overflow-hidden and w-full to the container */}
+          <div className="w-full max-w-full bg-white rounded-[3rem] border border-slate-100 p-6 md:p-10 shadow-sm overflow-hidden">
+            <div className="space-y-4">
+              {pendingHospitals.map((h) => (
+                <div
+                  key={h._id}
+                  className="flex flex-col lg:flex-row lg:items-center justify-between p-4 md:p-6 bg-slate-50 rounded-[2rem] gap-4"
+                >
+                  <div className="flex items-center gap-4 min-w-0">
+                    {" "}
+                    {/* min-w-0 allows text truncation */}
+                    <div className="shrink-0 w-12 h-12 bg-white rounded-xl flex items-center justify-center text-[#B354A6] border border-slate-100">
+                      <Building2 size={20} />
+                    </div>
+                    <div className="min-w-0 truncate">
+                      {" "}
+                      {/* Prevents long text from pushing the button out */}
+                      <p className="font-black text-slate-900 truncate italic">
+                        {h.name}
+                      </p>
+                      <p className="text-[10px] text-slate-400 truncate">
+                        {h.email}
+                      </p>
+                    </div>
                   </div>
-                ))}
-              </div>
-            </div>
-          </div>
 
-          {/* RECENT COMPLAINTS TABLE (Data Management) */}
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-            <div className="p-6 border-b flex justify-between items-center">
-              <h3 className="font-bold text-[#0F2854]">Live Complaint Feed</h3>
-              <div className="flex gap-2">
-                <button className="p-2 border rounded-lg hover:bg-gray-50"><Filter size={16}/></button>
-              </div>
+                  <div className="flex shrink-0 gap-2">
+                    <button
+                      onClick={() => approveHospital(h._id)}
+                      className="flex-1 lg:flex-none px-6 py-3 bg-slate-900 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest whitespace-nowrap"
+                    >
+                      Authorize
+                    </button>
+                  </div>
+                </div>
+              ))}
             </div>
-            <table className="w-full">
-              <thead className="bg-gray-50 text-xs text-gray-400 font-bold uppercase">
-                <tr>
-                  <th className="px-6 py-4 text-left">Ticket ID</th>
-                  <th className="px-6 py-4 text-left">User</th>
-                  <th className="px-6 py-4 text-left">Category</th>
-                  <th className="px-6 py-4 text-left">Priority</th>
-                  <th className="px-6 py-4 text-left">Status</th>
-                  <th className="px-6 py-4 text-right">Action</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100 text-sm">
-                {complaints.map((item) => (
-                  <tr key={item.id} className="hover:bg-blue-50/30 transition">
-                    <td className="px-6 py-4 font-mono font-bold text-[#1C4D8D]">{item.id}</td>
-                    <td className="px-6 py-4">
-                      <p className="font-medium">{item.user}</p>
-                      <p className="text-[10px] text-gray-400">{item.date}</p>
-                    </td>
-                    <td className="px-6 py-4"><span className="bg-gray-100 px-2 py-1 rounded text-xs">{item.category}</span></td>
-                    <td className="px-6 py-4">
-                      <span className={`font-bold ${item.priority === 'High' ? 'text-red-500' : 'text-gray-500'}`}>
-                        ● {item.priority}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4">
-                      <select className="bg-white border text-xs rounded-md px-2 py-1 focus:ring-1 focus:ring-[#0F2854]">
-                        <option>{item.status}</option>
-                        <option>In Progress</option>
-                        <option>Resolved</option>
-                      </select>
-                    </td>
-                    <td className="px-6 py-4 text-right">
-                      <div className="flex justify-end gap-3 text-gray-400">
-                        <Edit3 size={16} className="hover:text-blue-600 cursor-pointer" />
-                        <Trash2 size={16} className="hover:text-red-600 cursor-pointer" />
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
           </div>
         </div>
-      </main>
+      </div>
     </div>
   );
-}
+};
 
-/* HELPER COMPONENTS */
-function NavItem({ icon, label, active = false }) {
-  return (
-    <div className={`flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-all ${active ? 'bg-[#1C4D8D] text-white shadow-lg shadow-black/20' : 'text-gray-400 hover:bg-white/5 hover:text-white'}`}>
-      {icon} <span className="text-sm font-medium">{label}</span>
+// --- SUB-COMPONENTS ---
+
+const SummaryCard = ({ label, value, change, icon, color, bg, isAlert }) => (
+  <div
+    className={`bg-white p-7 rounded-[2.5rem] border border-slate-100 shadow-sm relative overflow-hidden group hover:border-[#B354A6]/30 transition-all ${isAlert ? "ring-2 ring-amber-100" : ""}`}
+  >
+    <div
+      className={`p-3.5 rounded-2xl ${bg} ${color} w-fit mb-5 group-hover:scale-110 group-hover:rotate-6 transition-transform`}
+    >
+      {React.cloneElement(icon, { size: 22 })}
     </div>
-  );
-}
+    <h4 className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">
+      {label}
+    </h4>
+    <div className="flex items-baseline gap-2">
+      <p className="text-3xl font-black text-slate-900">{value}</p>
+      {change && (
+        <span
+          className={`text-[10px] font-black ${isAlert ? "text-amber-600" : "text-[#B354A6]"} uppercase italic`}
+        >
+          {change}
+        </span>
+      )}
+    </div>
+  </div>
+);
 
-function StatCard({ title, value, icon, color, bg }) {
-  return (
-    <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm flex items-center justify-between hover:scale-105 transition-transform duration-300">
+const ShipmentItem = ({ hospital, units, time, status }) => (
+  <div className="flex items-center justify-between p-5 hover:bg-slate-50 rounded-2xl transition border border-transparent hover:border-slate-100 group">
+    <div className="flex items-center gap-4">
+      <div className="w-12 h-12 bg-slate-100 rounded-xl flex items-center justify-center text-slate-400 group-hover:text-[#B354A6] group-hover:bg-[#B354A6]/5 transition-all">
+        <Building2 size={20} />
+      </div>
       <div>
-        <p className="text-gray-400 text-xs font-bold uppercase">{title}</p>
-        <h3 className="text-3xl font-black text-[#0F2854] mt-1">{value}</h3>
-      </div>
-      <div className={`p-4 rounded-2xl ${bg} ${color}`}>
-        {React.cloneElement(icon, { size: 28 })}
+        <p className="text-sm font-black text-slate-900">{hospital}</p>
+        <p className="text-[10px] text-slate-400 font-bold uppercase tracking-tighter">
+          {units} • {time}
+        </p>
       </div>
     </div>
+    <div className="flex items-center gap-3">
+      <span
+        className={`text-[9px] font-black uppercase tracking-widest px-3 py-1.5 rounded-lg ${status === "Delivered" ? "bg-emerald-50 text-emerald-600" : "bg-indigo-50 text-indigo-600"}`}
+      >
+        {status}
+      </span>
+      <ChevronRight
+        size={16}
+        className="text-slate-300 group-hover:translate-x-1 transition-transform"
+      />
+    </div>
+  </div>
+);
+
+const HealthMetric = ({ label, value, status, color }) => (
+  <div className="flex items-center justify-between">
+    <div>
+      <p className="text-[11px] font-black text-slate-900 uppercase tracking-tighter">
+        {label}
+      </p>
+      <p className="text-[9px] text-[#B354A6] font-black uppercase tracking-widest italic">
+        {status}
+      </p>
+    </div>
+    <div className="text-right">
+      <p className="text-sm font-black text-slate-900">{value}</p>
+      <div
+        className={`w-10 h-1 rounded-full ${color} mt-2 ml-auto shadow-sm`}
+      ></div>
+    </div>
+  </div>
+);
+
+const StockMeter = ({ group, percentage, color }) => {
+  // ⭐ convert units → percentage for circle fill
+  const safePercent = Math.min((percentage / 50) * 100, 100);
+
+  return (
+    <div className="flex flex-col items-center gap-4 group">
+      <div className="relative w-24 h-24 flex items-center justify-center">
+        <svg className="w-full h-full transform -rotate-90">
+          <circle
+            cx="48"
+            cy="48"
+            r="42"
+            stroke="#F1F5F9"
+            strokeWidth="8"
+            fill="transparent"
+          />
+          <circle
+            cx="48"
+            cy="48"
+            r="42"
+            stroke="currentColor"
+            strokeWidth="8"
+            fill="transparent"
+            strokeDasharray={263.8}
+            strokeDashoffset={263.8 - (263.8 * safePercent) / 100}
+            strokeLinecap="round"
+            className={`${color} transition-all duration-[1.5s] ease-out`}
+          />
+        </svg>
+
+        <span className="absolute text-lg font-black text-slate-900 group-hover:scale-125 transition-transform">
+          {group}
+        </span>
+      </div>
+
+      {/* ⭐ changed text only */}
+      <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">
+        {percentage} Units
+      </p>
+    </div>
   );
-}
+};
+export default MainDashboard;
